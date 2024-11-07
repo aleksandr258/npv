@@ -44,11 +44,13 @@ export default class SideMenu extends React.Component{
         }
     }
     saveProjectData = (updatedData) => {
+        console.log('saveProjectData', updatedData)
         const { selectedIndex } = this.state;
     
         if (selectedIndex === null) {
             // Если selectedIndex равен null, это означает добавление нового проекта
             this.props.addProject(updatedData);
+            // this.props.updateProjects(selectedIndex, updatedData);
         } else {
             // Иначе обновляем существующий проект
             this.props.updateProjects(selectedIndex, updatedData);
@@ -58,6 +60,12 @@ export default class SideMenu extends React.Component{
             showModal: false // Закрываем модальное окно после сохранения
         });
     };
+
+    handleCashflowsChange = (value) => {
+        // Разбиваем строку на массив чисел
+        const cashflows = value.split(' ').map(num => parseFloat(num.trim())).filter(num => !isNaN(num));
+        this.setState({ cashflows });
+    }
 
     // handleAddProject = () => {
     //     if (this.state.projects.length < 3){
@@ -105,8 +113,10 @@ export default class SideMenu extends React.Component{
                     show={this.state.showModal}
                     handleClose={this.handleCloseModal}
                     inputValue={this.state.inputValue}
+                    cashflows={this.state.cashflows} 
                     onInputChange={this.handleChange}
                     onSave={this.saveProjectData}
+                    onCashflowsChange={this.handleCashflowsChange}
                 />
 
                
@@ -125,7 +135,7 @@ class ProjectModal extends React.Component {
                 name: props.inputValue || '',
                 invest: '',
                 discountRate: '',
-                cashflows: ''
+                cashflows: '',
             }
         };
     }
@@ -149,12 +159,49 @@ class ProjectModal extends React.Component {
                 [field]: value
             }
         }));
+        console.log(value)
+    };
+
+    handleCashflowsChange = (value) => {
+        // Проверяем, что введенные данные являются числом или пробелом
+
+        const isValidInput = /^[0-9\s]*$/.test(value);
+        
+        if (isValidInput || value === '') { // Если введено число или пустая строка
+            this.setState(prevState => ({
+                tempData: {
+                    ...prevState.tempData,
+                    cashflows: value // Обновляем cashflows
+                }
+            }));
+        }
     };
 
     handleSave = () => {
-        this.props.onSave(this.state.tempData); // Передаем данные в родительский компонент
+        const { name, invest, discountRate, cashflows } = this.state.tempData;
+        // Проверяем, есть ли cashflows
+        if (name === '' && invest === '' && discountRate === '') {
+            alert('Пожалуйста, введите все данные');
+            return; // Прерываем выполнение, если cashflows пустой
+        }
+        console.log(this.state.tempData)
+
+        const cash = cashflows.split(' ').map(num => parseFloat(num.trim())).filter(e => !isNaN(e));
+        console.log(cash)
+        if (cash.length < 5 || cash.length > 8){
+            alert('Количество денежных потоков должно быть от 5 до 8')
+            return
+        }
+
+        // Передаем данные в родительский компонент
+        this.props.onSave({ name, invest, discountRate, cashflows: cash}); 
         this.props.handleClose(); // Закрываем модальное окно
     };
+
+    // handleSave = () => {
+    //     this.props.onSave(this.state.tempData); // Передаем данные в родительский компонент
+    //     this.props.handleClose(); // Закрываем модальное окно
+    // };
 
     render() {
         const { handleClose, show } = this.props;
@@ -200,7 +247,7 @@ class ProjectModal extends React.Component {
                                 as="textarea" 
                                 rows={3} 
                                 value={tempData.cashflows}
-                                onChange={(e) => this.handleChange('cashflows', e.target.value)}
+                                onChange={(e) => this.handleCashflowsChange(e.target.value)}
                             />
                         </Form.Group>
                     </Form>
